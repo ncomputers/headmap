@@ -1,19 +1,21 @@
 # Crypto Heatmap Example
 
-This project shows a simple FastAPI application that uses `ccxt.pro` to stream
-real-time ticker data from Binance via websockets. The data is served to a small
-web page which displays a color-coded heatmap of the latest prices.
+This project shows a simple FastAPI application that displays a color-coded
+heatmap of crypto prices. If `ccxt.pro` is installed it streams real-time
+ticker data from Binance via websockets. Without it the app falls back to
+polling the REST API using the free `ccxt` package.
 
 ## Requirements
 
 - Python 3.10+
-- `ccxt.pro` (paid subscription) or `ccxt` for limited functionality
 - `fastapi`, `uvicorn`
+- `ccxt` (install `ccxt.pro` if you have a subscription for websocket support)
 
 Install dependencies from `requirements.txt`:
 
 ```bash
 pip install -r requirements.txt
+# optional: pip install ccxtpro
 ```
 
 ## Running the app
@@ -28,6 +30,6 @@ Then open `http://localhost:8000/` in your browser to see the heatmap.
 
 ## Notes
 
-The example uses a background task that keeps ticker information updated via the
-Binance websocket API. Without an active `ccxt.pro` subscription the websocket
-features will not work and the heatmap will remain empty.
+The example uses a background task to keep ticker information updated. When
+`ccxt.pro` is available the data comes from Binance websockets. Otherwise the
+task polls the REST API every second, so updates appear slightly slower.

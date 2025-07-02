@@ -2,11 +2,14 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import asyncio
 
-# ccxt.pro provides the real-time websocket interface
-try:
+# ccxt.pro provides the real-time websocket interface. If it's not available
+# we fall back to the regular ccxt client and poll HTTP endpoints.
+try:  # pragma: no cover - runtime import check only
     import ccxt.pro as ccxt
-except ImportError:  # fallback for environments without the pro version
+    HAS_WS = True
+except ImportError:  # pragma: no cover - fallback for free users
     import ccxt
+    HAS_WS = False
 
 app = FastAPI()
 
@@ -17,12 +20,22 @@ exchange = ccxt.binance()
 latest_tickers = {}
 
 async def watch_markets(markets):
-    """Background task to keep ticker information updated via websocket."""
+    """Keep ticker information updated.
+
+    If ccxt.pro is installed we use the websocket method ``watch_tickers``.
+    Otherwise we periodically poll ``fetch_ticker`` in a background thread.
+    """
     while True:
         try:
-            data = await exchange.watch_tickers(markets)
-            for symbol, ticker in data.items():
-                latest_tickers[symbol] = ticker
+            if HAS_WS:
+                data = await exchange.watch_tickers(markets)
+                for symbol, ticker in data.items():
+                    latest_tickers[symbol] = ticker
+            else:
+                for symbol in markets:
+                    ticker = await asyncio.to_thread(exchange.fetch_ticker, symbol)
+                    latest_tickers[symbol] = ticker
+                await asyncio.sleep(1)
         except Exception as exc:  # pragma: no cover - runtime logging only
             print("watch_markets error", exc)
             await asyncio.sleep(5)
